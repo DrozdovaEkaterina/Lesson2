@@ -6,6 +6,6 @@
   "description": "Интерактивная тетрадь Екатерины: урок 2, IT-Эверест",
   "scripts": {
     "start": "python3 -m http.server 4173 --directory dist --bind 127.0.0.1",
-    "check": "node --check dist/app.js && node --check dist/lesson.js && node --check dist/drawings.js && node --test tests/state.test.mjs"
+    "check": "node --check dist/app.js && node --check dist/lesson.js && node --check dist/drawings.js && node --check dist/guidance.js && node --check dist/certificate.js && node --test tests/state.test.mjs"
   }
 }

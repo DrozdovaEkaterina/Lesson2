@@ -1,6 +1,8 @@
-import { LESSON, QUIZ } from './lesson.js';
-import { drawing } from './drawings.js';
-import { STAGE_IDS, STORAGE_KEY, newState, normalizeState, completeStage, canFinish } from './state.js';
+import { LESSON, QUIZ } from './lesson.js?v=4';
+import { drawing } from './drawings.js?v=4';
+import { STAGE_IDS, STORAGE_KEY, TYPING_TASKS, matchesTyping, newState, normalizeState, completeStage, canFinish } from './state.js?v=4';
+import { guideHTML, inlineTeacher, BREAKS } from './guidance.js?v=4';
+import { CERTIFICATE_TEXT, ACHIEVEMENT_TEXT, certificateSVG } from './certificate.js?v=4';
 
 const $=selector=>document.querySelector(selector);
 let state=newState();
@@ -40,15 +42,20 @@ function goTo(index,{focus=true}={}){
 }
 function renderReplica(){
   const stage=LESSON[state.stage];
-  state.replica=Math.min(state.replica,stage.lines.length-1);
+  const lines=stage.kind==='keyboard'?stage.lines.slice(0,1):stage.lines;
+  state.replica=Math.min(state.replica,lines.length-1);
   $('#replica').textContent=stage.lines[state.replica];
   $('#replica-dots').replaceChildren();
-  stage.lines.forEach((_,i)=>{
+  lines.forEach((_,i)=>{
     const b=document.createElement('button');b.type='button';b.className='replica-dot';b.setAttribute('aria-label',`Реплика ${i+1} из ${stage.lines.length}`);b.setAttribute('aria-pressed',String(i===state.replica));
     b.addEventListener('click',()=>{state.replica=i;renderReplica();save();});$('#replica-dots').appendChild(b);
   });
   $('#next-replica').innerHTML=state.replica<stage.lines.length-1?'Дальше <span aria-hidden="true">→</span>':'Сначала <span aria-hidden="true">↺</span>';
+  $('#next-replica').hidden=stage.kind==='keyboard';
+  $('#replica-dots').hidden=stage.kind==='keyboard';
 }
+function afterGameSpeech(){return `<section class="teacher-row after-game-teacher" aria-label="Екатерина: после игры"><figure class="teacher-photo"><div class="photo-window"><img src="assets/ekaterina.jpg?v=2" alt="Екатерина, твой преподаватель" width="900" height="944"></div><figcaption>Екатерина</figcaption></figure><div class="speech"><div class="speech-label">ЕКАТЕРИНА · ПОСЛЕ ИГРЫ</div><p>${LESSON[2].lines[1]}</p></div></section>`;}
+function typingHelp(){return `<div class="key-helper"><p>Нужна помощь с клавишей? Нажми:</p><div class="key-helper-buttons"><button type="button" data-key-help="backspace"><kbd>⌫ Backspace</kbd></button><button type="button" data-key-help="shift"><kbd>↑ Shift</kbd></button><button type="button" data-key-help="space"><kbd>Пробел</kbd></button><button type="button" data-key-help="signs"><kbd>! ?</kbd></button></div><p id="key-help-text" class="key-help-text" role="status"></p></div><details class="typing-help"><summary>Где Backspace и как печатать буквы, пробелы и знаки?</summary><ul><li><strong>Backspace:</strong> справа вверху, обычно над Enter. На клавише написано Backspace или нарисована стрелка <kbd>⌫</kbd>. На Mac она часто называется Delete. Нажми её, чтобы стереть символ слева от курсора.</li><li><strong>Большая буква:</strong> удерживай <kbd>Shift</kbd> и нажми нужную букву. Отпусти Shift, чтобы снова печатать маленькие буквы.</li><li><strong>Пробел:</strong> самая длинная клавиша в нижнем ряду. Между словами нажми её один раз.</li><li><strong>Знаки ! и ?:</strong> выбери английский язык через значок языка на панели компьютера. Для <strong>!</strong> держи <kbd>Shift</kbd> и нажми <kbd>1</kbd>. Для <strong>?</strong> держи <kbd>Shift</kbd> и нажми клавишу <kbd>/</kbd> — обычно она справа от клавиши с точкой, рядом с правым Shift. Затем верни русский язык для букв.</li></ul><p>Проверка различает большие и маленькие буквы. Повтори образец точно.</p></details>`;}
 function tasksHTML(tasks){
   const make=t=>`<a class="task-link${state.opened.includes(t.id)?' opened':''}" data-task="${t.id}" href="${t.url}" target="_blank" rel="noopener noreferrer" aria-label="${t.title}. Откроется в новой вкладке"><span><strong>${t.title}</strong><small>${t.desc}</small></span><span class="task-right"><span class="task-tag">${state.opened.includes(t.id)?'Открывалось':(t.tag||'Ещё практика')}</span><span class="external-arrow" aria-hidden="true">↗</span></span></a>`;
   const main=tasks.filter(t=>!t.extra),extra=tasks.filter(t=>t.extra);
@@ -58,45 +65,53 @@ function renderActivity(){
   const stage=LESSON[state.stage],area=$('#activity');
   const tasks=stage.tasks?tasksHTML(stage.tasks):'';
   if(stage.kind==='welcome'){
-    area.innerHTML='<div class="welcome-note"><span><strong>8</strong> остановок</span><span>Примерно <strong>45 минут</strong></span><span>В своём темпе</span></div>';
+    area.innerHTML=inlineTeacher('Когда будешь готов, нажми большую синюю кнопку «Начать экспедицию».');
   }else if(stage.kind==='devices'){
-    area.innerHTML=`<div class="device-grid" aria-label="Устройства компьютера"><button type="button" class="device-button" data-device="keyboard" aria-pressed="false">${drawing('keyboard')}<strong>Клавиатура</strong><span>Нажми и узнай</span></button><button type="button" class="device-button" data-device="monitor" aria-pressed="false">${drawing('monitor')}<strong>Монитор</strong><span>Нажми и узнай</span></button><button type="button" class="device-button" data-device="mouse" aria-pressed="false">${drawing('mouse')}<strong>Мышь</strong><span>Нажми и узнай</span></button></div><p class="device-explanation" role="status">У каждого устройства есть своя важная работа.</p>${tasks}`;
+    area.innerHTML=`<div class="device-grid" aria-label="Устройства компьютера"><button type="button" class="device-button" data-device="keyboard" aria-pressed="false">${drawing('keyboard')}<strong>Клавиатура</strong><span>Нажми и узнай</span></button><button type="button" class="device-button" data-device="monitor" aria-pressed="false">${drawing('monitor')}<strong>Монитор</strong><span>Нажми и узнай</span></button><button type="button" class="device-button" data-device="mouse" aria-pressed="false">${drawing('mouse')}<strong>Мышь</strong><span>Нажми и узнай</span></button></div><p class="device-explanation" role="status">У каждого устройства есть своя важная работа.</p><p class="explore-progress" id="device-progress">Посмотрено: ${state.devicesSeen.length} из 3. Нажми на каждый рисунок.</p>${inlineTeacher('Теперь открой игру большой кнопкой. После игры вернись на вкладку с тетрадью.')}${tasks}`;
   }else if(stage.kind==='keyboard'){
-    area.innerHTML=`${tasks}<form class="practice" id="typing-form"><h2 class="section-caption">А теперь — маленькая практика</h2><p class="practice-intro">Три слова из нашей экспедиции. Печатай спокойно, по одной букве.</p><label for="typing-input">Напечатай слово, которое видишь слева:</label><div class="typing-line"><span class="word-target" id="word-target"></span><input class="text-input" id="typing-input" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="typing-feedback"><button type="submit" class="secondary-button" id="check-word">Проверить</button></div><p class="feedback" id="typing-feedback" role="status"></p></form>`;
+    area.innerHTML=`${tasks}<button type="button" class="secondary-button after-game-button" id="keyboard-continue" aria-controls="keyboard-practice" aria-expanded="${state.keyboardGameDone}">${state.keyboardGameDone?'Вернуться к практике':'Я закончил игру → к практике'}</button><section id="keyboard-practice" ${state.keyboardGameDone?'':'hidden'}>${afterGameSpeech()}<form class="practice" id="typing-form"><h2 class="section-caption">Пять шагов уверенной печати</h2><p class="practice-intro">Большие и маленькие буквы, пробелы и знаки. Печатай спокойно, как в образце.</p><p class="typing-progress" id="typing-progress"></p><label for="typing-input">Повтори образец точно:</label><p id="space-note" class="practice-space-note" hidden>␣ означает пробел. Нажми длинную клавишу внизу один раз.</p><div class="typing-line"><span class="word-target" id="word-target"></span><input class="text-input" id="typing-input" autocomplete="off" spellcheck="false" autocapitalize="none" aria-describedby="typing-feedback"><button type="submit" class="secondary-button" id="check-word">Проверить</button></div><p class="feedback" id="typing-feedback" role="status"></p></form>${typingHelp()}</section>`;
     updateWord();
   }else if(stage.kind==='components'){
-    area.innerHTML=`<div class="component-scene"><div class="scene-art">${drawing('camp')}</div><div class="component-options" aria-label="Детали компьютера"><button class="component-button" type="button" data-component="cpu" aria-pressed="false">${drawing('cpu')}<span>Процессор</span></button><button class="component-button" type="button" data-component="ram" aria-pressed="false">${drawing('ram')}<span>Оперативная память</span></button><button class="component-button" type="button" data-component="drive" aria-pressed="false">${drawing('drive')}<span>Накопитель</span></button></div></div><p class="component-description" role="status">Выбери деталь и прочитай, для чего она нужна.</p>${tasks}`;
+    area.innerHTML=`<div class="component-scene"><div class="scene-art">${drawing('camp')}</div><div class="component-controls"><div class="component-options" aria-label="Детали компьютера"><button class="component-button" type="button" data-component="cpu" aria-pressed="false">${drawing('cpu')}<span>Процессор</span></button><button class="component-button" type="button" data-component="ram" aria-pressed="false">${drawing('ram')}<span>Оперативная память</span></button><button class="component-button" type="button" data-component="drive" aria-pressed="false">${drawing('drive')}<span>Накопитель</span></button></div><p class="component-description" role="status">Выбери название: деталь подсветится на схеме, а здесь появится её назначение.</p></div></div><p class="explore-progress" id="part-progress">Найдено: ${state.partsSeen.length} из 3</p>${inlineTeacher('Понажимай на все три названия. Каждая деталь подсветится. Внизу есть дополнительная игра о значках файлов.')}${tasks}`;
   }else if(stage.kind==='safety'){
-    area.innerHTML=`<div class="rules-grid"><div class="rule">${drawing('shield')}<span>Бережём себя<br>и компьютер</span></div><div class="rule">${drawing('monitor')}<span>Сидим удобно<br>и внимательно</span></div><div class="rule">${drawing('tent')}<span>Делаем привалы<br>и отдыхаем</span></div></div><div class="break-note"><span class="handwritten">Маленький привал!</span><p>Встань, расправь плечи, посмотри вдаль. Возвращайся, когда отдохнёшь.</p></div>${tasks}`;
+    area.innerHTML=`<div class="rules-grid"><div class="rule">${drawing('shield')}<span>Бережём себя<br>и компьютер</span></div><div class="rule">${drawing('monitor')}<span>Сидим удобно<br>и внимательно</span></div><div class="rule">${drawing('tent')}<span>Делаем привалы<br>и отдыхаем</span></div></div><section class="break-exercises" aria-labelledby="break-title"><h2 class="section-caption" id="break-title">Привал для глаз и тела</h2><p class="practice-intro">Сделай упражнение и нажми «Готово».</p><div class="break-grid">${BREAKS.map((item,i)=>`<article class="break-card${state.breakDone.includes(item.id)?' is-done':''}"><div class="break-picture">${drawing(item.icon)}</div><div><h3>${i+1}. ${item.title}</h3><p>${item.text}</p><button type="button" class="secondary-button break-done" data-break="${item.id}" aria-pressed="${state.breakDone.includes(item.id)}">${state.breakDone.includes(item.id)?'✓ Сделано':'Готово'}</button></div></article>`).join('')}</div><p class="external-note">Двигайся плавно и без боли. Если движение неприятно, остановись.</p></section>${inlineTeacher('Отдохнул? Отлично. Теперь открой игру и выбери безопасные действия.')}${tasks}`;
   }else if(stage.kind==='screenshot'){
-    area.innerHTML=`<h2 class="section-caption">Какой у тебя компьютер?</h2>${osHTML(true)}<div id="screenshot-instructions"></div><div class="summit-postcard" id="summit-postcard"><h3>Моя победа — IT-Эверест!</h3>${drawing('summit')}<p class="postcard-caption">Большая вершина покоряется маленькими шагами.</p><p class="postcard-small">Моя экспедиция с Екатериной</p></div>`;
+    area.innerHTML=`<h2 class="section-caption">Какой у тебя компьютер?</h2><div class="os-explanation"><p>Посмотри на меню и клавиатуру:</p><ul><li><strong>Windows:</strong> внизу экрана есть кнопка «Пуск» со значком окошка. На клавиатуре обычно есть клавиша с таким же значком.</li><li><strong>Mac:</strong> слева вверху экрана находится меню с яблоком Apple, а на клавиатуре — клавиша <kbd>⌘ Command</kbd>.</li></ul><p>Выбери подходящий вариант. Если пока не можешь определить, нажми «Если не знаешь».</p></div>${osHTML(true)}<div id="screenshot-instructions"></div>${inlineTeacher('Вот открытка для снимка. Следуй шагам сверху и обведи её мышью.')}<div class="summit-postcard" id="summit-postcard"><h3>Моя победа — IT-Эверест!</h3>${drawing('summit')}<p class="postcard-caption">Большая вершина покоряется маленькими шагами.</p><p class="postcard-small">Мой снимок на вершине</p></div>`;
     renderScreenshot();
   }else if(stage.kind==='shortcuts'){
-    if(state.os==='lightshot')state.os='windows';
-    area.innerHTML=`${osHTML(false)}<div id="shortcut-cards"></div><div class="copy-practice"><label for="paste-input" class="practice-intro">Выдели слово, скопируй его и вставь в поле:</label><div class="typing-line"><span class="copy-word">вершина</span><input class="text-input" id="paste-input" placeholder="Вставь слово сюда" autocomplete="off" aria-describedby="paste-feedback"></div><p id="paste-feedback" class="feedback" role="status"></p></div>${tasks}`;
+    if(state.os==='unknown')state.os='windows';
+    area.innerHTML=`${osHTML(false)}<div id="shortcut-cards"></div>${inlineTeacher('Давай попробуем вместе. Сначала выдели слово, затем скопируй его и вставь в поле.')}<div class="copy-practice"><label for="paste-input" class="practice-intro">Выдели слово, скопируй его и вставь в поле:</label><div class="typing-line"><span class="copy-word">вершина</span><button type="button" class="secondary-button" id="select-copy-word">Выделить слово</button><input class="text-input" id="paste-input" placeholder="Вставь слово сюда" autocomplete="off" aria-describedby="paste-feedback"></div><p id="paste-feedback" class="feedback" role="status"></p></div>${tasks}`;
     renderShortcuts();
   }else if(stage.kind==='finish')renderFinish();
+  if(stage.kind==='devices')document.querySelectorAll('[data-device]').forEach(b=>{if(state.devicesSeen.includes(b.dataset.device)){b.classList.add('is-seen');b.querySelector('span').textContent='✓ Посмотрел';}});
 }
-function osHTML(lightshot){
-  return `<div class="os-selector" aria-label="Выбор компьютера"><button type="button" class="os-button" data-os="windows" aria-pressed="${state.os==='windows'}">Windows</button><button type="button" class="os-button" data-os="mac" aria-pressed="${state.os==='mac'}">Mac</button>${lightshot?`<button type="button" class="os-button" data-os="lightshot" aria-pressed="${state.os==='lightshot'}">Lightshot</button>`:''}</div>`;
+function osHTML(includeUnknown){
+  return `<div class="os-selector" aria-label="Выбор компьютера"><button type="button" class="os-button" data-os="windows" aria-pressed="${state.os==='windows'}">Windows</button><button type="button" class="os-button" data-os="mac" aria-pressed="${state.os==='mac'}">Mac</button>${includeUnknown?`<button type="button" class="os-button" data-os="unknown" aria-pressed="${state.os==='unknown'}">Если не знаешь</button>`:''}</div>`;
 }
 function renderScreenshot(){
   const steps={
     windows:['Одновременно нажми <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>. Выбери прямоугольный снимок.','Зажми кнопку мыши и обведи открытку с горой внизу. Отпусти кнопку.','Нажми на уведомление о снимке. Если его не видно, открой приложение «Ножницы» через меню «Пуск».','В окне со снимком нажми «Сохранить» или <kbd>Ctrl</kbd> + <kbd>S</kbd>. Назови файл <strong>МояПобеда</strong> и выбери папку.'],
     mac:['Одновременно нажми <kbd>Shift</kbd> + <kbd>⌘ Command</kbd> + <kbd>4</kbd>. Курсор станет перекрестием.','Зажми кнопку мыши или трекпада и обведи открытку с горой внизу. Отпусти кнопку.','Снимок обычно появится на рабочем столе. Если место сохранения меняли, проверь выбранную папку.','Найди снимок, выдели файл и нажми <kbd>Return</kbd>. Назови его <strong>МояПобеда</strong>, сохранив расширение файла.'],
-    lightshot:['Если Lightshot уже установлен, нажми его значок в браузере.','Выдели открытку с горой внизу, удерживая кнопку мыши.','Нажми значок сохранения, назови файл <strong>МояПобеда</strong> и выбери папку.','Если расширения ещё нет, выбери вкладку Windows или Mac — там есть способ без установки.']
+    unknown:['Для этого способа открой урок в браузере <strong>Google Chrome</strong>. Расширение Lightshot работает в нём и на Windows, и на Mac, поэтому выбирать систему не нужно.','Нажми <a href="https://chromewebstore.google.com/detail/lightshot-screenshot-tool/mbniclmhobmnbdlbpiphghaielnnpgdp?hl=ru" target="_blank" rel="noopener noreferrer">«Открыть Lightshot в магазине Chrome» ↗</a>. Проверь название <strong>Lightshot (screenshot tool)</strong>.','На странице расширения нажми <strong>«Установить»</strong> или <strong>«Добавить в Chrome»</strong>, затем подтверди <strong>«Установить расширение»</strong>. Chrome сам скачает и установит его. Если установка на этом компьютере запрещена, обратись к его владельцу.','Вернись в тетрадь. Нажми значок пазла справа от адресной строки и выбери <strong>Lightshot</strong>. Можно закрепить значок пера кнопкой рядом с названием.','Нажми значок Lightshot и, удерживая кнопку мыши, выдели открытку с горой внизу. Отпусти кнопку.','На панели Lightshot нажми значок дискеты <strong>«Сохранить»</strong>. Выбери папку, назови файл <strong>МояПобеда</strong> и нажми «Сохранить». Для этого задания нужна кнопка сохранения файла.']
   };
-  $('#screenshot-instructions').innerHTML=`<ol class="screenshot-steps">${steps[state.os].map(t=>`<li>${t}</li>`).join('')}</ol>${state.os==='lightshot'?'<p class="external-note"><a href="https://chromewebstore.google.com/detail/lightshot-screenshot-tool/mbniclmhobmnbdlbpiphghaielnnpgdp?hl=ru" target="_blank" rel="noopener noreferrer">Открыть Lightshot в магазине Chrome ↗</a> · С установкой можно обратиться к взрослому.</p>':''}`;
+  const items=steps[state.os];
+  state.screenshotStep=Math.min(state.screenshotStep,items.length-1);
+  const last=state.screenshotStep===items.length-1;
+  $('#screenshot-instructions').innerHTML=`${state.os==='unknown'?'<h3 class="lightshot-title">Снимок с помощью Lightshot</h3>':''}<section class="shot-wizard" aria-label="Инструкция по одному шагу"><div class="shot-step-count">Шаг ${state.screenshotStep+1} из ${items.length}</div><div class="shot-current" aria-live="polite">${items[state.screenshotStep]}</div><div class="shot-controls"><button type="button" id="shot-prev" class="secondary-button" ${state.screenshotStep===0?'disabled':''}>← Назад</button><button type="button" id="shot-next" class="primary-button" ${last&&state.screenshotDone?'disabled':''}>${last?(state.screenshotDone?'✓ Снимок готов!':'Я сохранил снимок ✓'):'Сделал — дальше →'}</button></div></section><details class="all-shot-steps"><summary>Показать все шаги</summary><ol class="screenshot-steps">${items.map(t=>`<li>${t}</li>`).join('')}</ol></details>${state.os==='unknown'?'<p class="external-note">Версии для других браузеров и отдельное приложение: <a href="https://app.prntscr.com/ru/" target="_blank" rel="noopener noreferrer">официальный сайт Lightshot ↗</a>.</p>':''}`;
 }
 function renderShortcuts(){
   const key=state.os==='mac'?'⌘ Cmd':'Ctrl';
   $('#shortcut-cards').innerHTML=`<div class="shortcut-grid">${[['C','Копировать'],['V','Вставить'],['Z','Отменить']].map(([k,label])=>`<div class="shortcut-card"><div class="keys"><kbd>${key}</kbd> + <kbd>${k}</kbd></div><span>${label}</span></div>`).join('')}</div><p class="external-note">В заданиях LearningApps из методички используются обозначения Windows (Ctrl).</p>`;
 }
 function updateWord(){
-  const remaining=['гора','лагерь','вершина'].filter(w=>!state.words.includes(w));
-  $('#word-target').textContent=remaining[0]||'Готово!';
+  const remaining=TYPING_TASKS.filter(w=>!state.words.includes(w));
+  const target=remaining[0]||'Готово!';
+  $('#word-target').innerHTML=target.split(' ').map(word=>`<span class="sample-word">${word}</span>`).join('<span class="space-marker" aria-hidden="true">␣</span>');
+  $('#word-target').setAttribute('aria-label',target);
+  $('#space-note').hidden=!target.includes(' ');
   $('#typing-input').disabled=!remaining.length;$('#check-word').disabled=!remaining.length;
-  if(!remaining.length)$('#typing-feedback').textContent='Все три слова получились! Можно двигаться дальше.';
+  $('#typing-progress').innerHTML=`<span>${remaining.length?`Задание ${TYPING_TASKS.length-remaining.length+1} из ${TYPING_TASKS.length}`:`Выполнено ${TYPING_TASKS.length} из ${TYPING_TASKS.length}`}</span><span class="typing-stamps" aria-hidden="true">${TYPING_TASKS.map((_,i)=>`<span class="typing-stamp${i<state.words.length?' is-done':''}">${i<state.words.length?'✓':i+1}</span>`).join('')}</span>`;
+  if(!remaining.length)$('#typing-feedback').textContent='Все пять заданий получились! Ты справился с буквами, пробелами и знаками.';
 }
 function quizHTML(){return `<div class="quiz-list">${QUIZ.map((q,i)=>{
   const choice=state.quiz[i],answered=Number.isInteger(choice),correct=choice===q.correct;
@@ -106,7 +121,7 @@ function moodHTML(){return `<section class="mood-section" aria-labelledby="mood-
 function moodMessage(){return {happy:'Здорово! Вспомни своё любимое открытие.',practice:'Отличная идея. На карте можно вернуться к любой остановке.',help:'Попроси взрослого или Екатерину пройти трудный шаг вместе с тобой.'}[state.mood]||'';}
 function renderFinish(){
   if(state.finished){
-    $('#activity').innerHTML=`<div class="badge-card">${drawing('mountains')}<h3>Маршрут IT-Эверест пройден!</h3><p>Я познакомился с компьютером, потренировался и сделал новые открытия.</p><div class="handwritten">Моя экспедиция с Екатериной</div><p>За любопытство, внимательность и старание.</p><button type="button" class="secondary-button" id="download-badge">Сохранить карточку ↓</button></div>${moodHTML()}`;
+    $('#activity').innerHTML=`<div class="badge-card">${drawing('mountains')}<h3>Маршрут IT-Эверест пройден!</h3><p class="certificate-text">${CERTIFICATE_TEXT}</p><div class="achievement-medal">${drawing('medal')}<span class="handwritten">Юный исследователь</span></div><details class="achievement-details"><summary>${ACHIEVEMENT_TEXT}</summary><p>«Юный исследователь» — ты прошёл маршрут, потренировался и ответил на вопросы о компьютере.</p></details><button type="button" class="secondary-button" id="download-badge">Сохранить грамоту ↓</button></div>`;
   }else{
     $('#activity').innerHTML=quizHTML()+moodHTML()+'<p class="finish-status" id="finish-status"></p>';
   }
@@ -116,9 +131,9 @@ function updateFinishAction(){
   const b=$('#next-stage');
   if(state.finished){b.disabled=false;b.innerHTML='Вернуться к началу <span aria-hidden="true">↺</span>';return;}
   const pending=[0,1,2,3,4,5,6].filter(x=>!state.done.includes(x));
-  if(pending.length){b.disabled=false;b.innerHTML='Продолжить маршрут <span aria-hidden="true">→</span>';if($('#finish-status'))$('#finish-status').textContent=`До карточки экспедиции осталось отметить остановки: ${pending.map(i=>LESSON[i].nav).join(', ')}.`;}
+  if(pending.length){b.disabled=false;b.innerHTML='Продолжить маршрут <span aria-hidden="true">→</span>';if($('#finish-status'))$('#finish-status').textContent=`До грамоты осталось отметить остановки: ${pending.map(i=>LESSON[i].nav).join(', ')}.`;}
   else if(!canFinish(state)){b.disabled=true;b.textContent='Ответь на три вопроса';if($('#finish-status'))$('#finish-status').textContent='Попробуй ответить на все вопросы. К темам можно вернуться по карте.';}
-  else{b.disabled=false;b.innerHTML='Завершить экспедицию <span aria-hidden="true">→</span>';if($('#finish-status'))$('#finish-status').textContent='Все остановки пройдены, ответы верные. Карточка экспедиции готова!';}
+  else{b.disabled=false;b.innerHTML='Завершить экспедицию <span aria-hidden="true">→</span>';if($('#finish-status'))$('#finish-status').textContent='Все остановки пройдены, ответы верные. Грамота готова!';}
 }
 function render(){
   const stage=LESSON[state.stage];
@@ -126,15 +141,19 @@ function render(){
   history.replaceState(null,'',`#${stage.id}`);
   $('#stage-meta').textContent=`ОСТАНОВКА ${String(state.stage+1).padStart(2,'0')} / 08`;
   $('#margin-note').textContent=stage.note;$('#stage-eyebrow').textContent=stage.eyebrow;$('#stage-title').textContent=stage.title;$('#stage-subtitle').textContent=stage.subtitle;
+  $('#action-guide').innerHTML=state.stage===7&&state.finished?'':guideHTML(stage.id);
   $('#cover-art').hidden=state.stage!==0;
   $('#cover-art').innerHTML=state.stage===0?drawing('mountains')+'<span class="art-caption">Вперёд, к открытиям!</span>':'';
+  $('.lesson-sheet > .teacher-row').hidden=state.stage===7&&state.finished;
   $('#previous-stage').disabled=state.stage===0;
   $('#next-stage').disabled=false;
-  $('#next-stage').innerHTML=state.stage===0?'Начать экспедицию <span aria-hidden="true">→</span>':'Я справился <span aria-hidden="true">→</span>';
+  $('#next-stage').innerHTML=state.stage===0?'Начать экспедицию <span aria-hidden="true">→</span>':'Всё сделано! <span aria-hidden="true">→</span>';
   $('#page-number').textContent=`— ${String(state.stage+1).padStart(2,'0')} —`;
   $('#hint').hidden=true;$('#toggle-hint').setAttribute('aria-expanded','false');$('#toggle-hint').setAttribute('aria-controls','hint');$('#toggle-hint').textContent='Нужна подсказка?';
+  $('#toggle-hint').hidden=state.stage===7&&state.finished;
   updateProgress();renderReplica();renderActivity();save();
 }
+$('#action-guide').addEventListener('click',e=>{const b=e.target.closest('[data-guide-target]');if(!b)return;$('#action-guide').querySelectorAll('button').forEach(x=>x.classList.toggle('is-current',x===b));document.querySelector(b.dataset.guideTarget)?.scrollIntoView({behavior:'smooth',block:'center'});});
 $('#next-replica').addEventListener('click',()=>{state.replica=(state.replica+1)%LESSON[state.stage].lines.length;renderReplica();save();});
 route.addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(b)goTo(Number(b.dataset.stage));});
 $('#previous-stage').addEventListener('click',()=>goTo(state.stage-1));
@@ -144,26 +163,32 @@ $('#next-stage').addEventListener('click',()=>{
     const pending=[0,1,2,3,4,5,6].find(i=>!state.done.includes(i));
     if(pending!==undefined){goTo(pending);return;}
     if(!canFinish(state))return;
-    state.done=[...new Set([...state.done,7])];state.finished=true;save();render();$('#announcer').textContent='Экспедиция завершена. Карточка готова к сохранению.';
+    state.done=[...new Set([...state.done,7])];state.finished=true;save();render();$('#announcer').textContent='Экспедиция завершена. Грамота готова к сохранению.';
   }else{state=completeStage(state);save();render();$('#lesson').scrollIntoView({behavior:'smooth',block:'start'});$('#lesson').focus({preventScroll:true});}
 });
 $('#toggle-hint').addEventListener('click',()=>{const h=$('#hint');h.hidden=!h.hidden;h.textContent=LESSON[state.stage].hint;$('#toggle-hint').setAttribute('aria-expanded',String(!h.hidden));$('#toggle-hint').textContent=h.hidden?'Нужна подсказка?':'Скрыть подсказку';});
 $('#activity').addEventListener('click',e=>{
+  if(e.target.closest('#keyboard-continue')){state.keyboardGameDone=true;save();renderActivity();$('#keyboard-practice').scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const keyHelp=e.target.closest('[data-key-help]');if(keyHelp){document.querySelectorAll('[data-key-help]').forEach(b=>b.setAttribute('aria-pressed',String(b===keyHelp)));$('#key-help-text').textContent={backspace:'Найди Backspace справа вверху, над Enter. Она стирает символ слева от курсора. На Mac: Delete или ⌫.',shift:'Shift находится по краям ряда с буквами, обычно со стрелкой ↑. Держи Shift и нажми букву — получится большая.',space:'Пробел — самая длинная клавиша внизу клавиатуры. Нажми её между словами один раз.',signs:'Для ! выбери английскую раскладку и нажми Shift + 1. Для ? на английской раскладке: Shift + / (рядом с правым Shift). Для букв верни русский.'}[keyHelp.dataset.keyHelp];return;}
+  const exercise=e.target.closest('[data-break]');if(exercise){const id=exercise.dataset.break;state.breakDone=state.breakDone.includes(id)?state.breakDone.filter(x=>x!==id):[...state.breakDone,id];const done=state.breakDone.includes(id);exercise.setAttribute('aria-pressed',String(done));exercise.textContent=done?'✓ Сделано':'Готово';exercise.closest('.break-card').classList.toggle('is-done',done);save();return;}
+  if(e.target.closest('#shot-next')){const total=state.os==='unknown'?6:4;if(state.screenshotStep<total-1)state.screenshotStep++;else state.screenshotDone=true;save();renderScreenshot();return;}
+  if(e.target.closest('#shot-prev')){state.screenshotStep=Math.max(0,state.screenshotStep-1);save();renderScreenshot();return;}
+  if(e.target.closest('#select-copy-word')){const range=document.createRange();range.selectNodeContents($('.copy-word'));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);$('#paste-feedback').textContent='Слово выделено. Нажми сочетание «Копировать», затем нажми на поле и используй «Вставить».';return;}
   const task=e.target.closest('[data-task]');if(task){if(!state.opened.includes(task.dataset.task))state.opened.push(task.dataset.task);task.classList.add('opened');const tag=task.querySelector('.task-tag');if(tag)tag.textContent='Открывалось';save();return;}
-  const device=e.target.closest('[data-device]');if(device){document.querySelectorAll('[data-device]').forEach(b=>b.setAttribute('aria-pressed',String(b===device)));$('.device-explanation').textContent={keyboard:'Клавиатура — устройство ввода. С её помощью мы вводим буквы, числа и команды.',monitor:'Монитор — устройство вывода. Он показывает тексты, картинки и результат нашей работы.',mouse:'Мышь — устройство ввода. Она помогает выбирать, открывать и перемещать объекты на экране.'}[device.dataset.device];return;}
-  const part=e.target.closest('[data-component]');if(part){document.querySelectorAll('[data-component]').forEach(b=>b.setAttribute('aria-pressed',String(b===part)));$('.component-description').textContent={cpu:'Процессор выполняет команды и обрабатывает данные. Он помогает компьютеру решать задачи.',ram:'Оперативная память хранит данные, нужные для текущей работы. После выключения её содержимое не сохраняется.',drive:'Накопитель хранит программы, фотографии и другие файлы, в том числе после выключения компьютера.'}[part.dataset.component];return;}
-  const os=e.target.closest('[data-os]');if(os){state.os=os.dataset.os;document.querySelectorAll('[data-os]').forEach(b=>b.setAttribute('aria-pressed',String(b===os)));if(state.stage===5)renderScreenshot();if(state.stage===6)renderShortcuts();save();return;}
+  const device=e.target.closest('[data-device]');if(device){document.querySelectorAll('[data-device]').forEach(b=>b.setAttribute('aria-pressed',String(b===device)));if(!state.devicesSeen.includes(device.dataset.device))state.devicesSeen.push(device.dataset.device);device.classList.add('is-seen');device.querySelector('span').textContent='✓ Посмотрел';$('#device-progress').textContent=`Посмотрено: ${state.devicesSeen.length} из 3`;save();$('.device-explanation').textContent={keyboard:'Клавиатура — устройство ввода. С её помощью мы вводим буквы, числа и команды.',monitor:'Монитор — устройство вывода. Он показывает тексты, картинки и результат нашей работы.',mouse:'Мышь — устройство ввода. Она помогает выбирать, открывать и перемещать объекты на экране.'}[device.dataset.device];return;}
+  const part=e.target.closest('[data-component]');if(part){document.querySelectorAll('[data-component]').forEach(b=>b.setAttribute('aria-pressed',String(b===part)));document.querySelectorAll('[data-diagram-part]').forEach(g=>g.classList.toggle('is-selected',g.dataset.diagramPart===part.dataset.component));if(!state.partsSeen.includes(part.dataset.component))state.partsSeen.push(part.dataset.component);$('#part-progress').textContent=`Найдено: ${state.partsSeen.length} из 3`;save();$('.component-description').textContent={cpu:'Процессор (CPU) выполняет команды и обрабатывает данные. Он помогает компьютеру решать задачи.',ram:'Оперативная память (RAM) хранит данные, нужные для текущей работы. После выключения её содержимое не сохраняется.',drive:'Накопитель (здесь SSD) хранит программы, фотографии и другие файлы, в том числе после выключения компьютера.'}[part.dataset.component];return;}
+  const os=e.target.closest('[data-os]');if(os){state.os=os.dataset.os;state.screenshotStep=0;state.screenshotDone=false;document.querySelectorAll('[data-os]').forEach(b=>b.setAttribute('aria-pressed',String(b===os)));if(state.stage===5)renderScreenshot();if(state.stage===6)renderShortcuts();save();return;}
   const answer=e.target.closest('[data-quiz]');if(answer){state.quiz[Number(answer.dataset.quiz)]=Number(answer.dataset.answer);save();const q=Number(answer.dataset.quiz),card=answer.closest('.quiz-card');const correct=state.quiz[q]===QUIZ[q].correct;card.querySelectorAll('.quiz-option').forEach(b=>{const selected=Number(b.dataset.answer)===state.quiz[q];b.setAttribute('aria-pressed',String(selected));b.classList.toggle('wrong',selected&&!correct);});const message=card.querySelector('.quiz-message');message.textContent=correct?QUIZ[q].yes:QUIZ[q].no;message.classList.toggle('wrong',!correct);updateFinishAction();return;}
   const mood=e.target.closest('[data-mood]');if(mood){state.mood=mood.dataset.mood;document.querySelectorAll('[data-mood]').forEach(b=>b.setAttribute('aria-pressed',String(b===mood)));$('#mood-feedback').textContent=moodMessage();save();return;}
   if(e.target.closest('#download-badge'))downloadBadge();
 });
 $('#activity').addEventListener('submit',e=>{
   if(e.target.id!=='typing-form')return;e.preventDefault();
-  const target=['гора','лагерь','вершина'].find(w=>!state.words.includes(w));if(!target)return;
-  const value=$('#typing-input').value.trim().toLocaleLowerCase('ru');
+  const target=TYPING_TASKS.find(w=>!state.words.includes(w));if(!target)return;
+  const value=$('#typing-input').value;
   const msg=$('#typing-feedback');
-  if(value===target){state.words.push(target);msg.classList.remove('try-again');msg.textContent=`Получилось! Слово «${target}» готово. Напечатай следующее.`;$('#typing-input').value='';updateWord();save();if(!$('#typing-input').disabled)$('#typing-input').focus();}
-  else{msg.classList.add('try-again');msg.textContent=value?'Пока не совпало. Проверь буквы и русский язык ввода. Можно попробовать ещё раз.':'Сначала напечатай слово из образца.';}
+  if(matchesTyping(value,target)){state.words.push(target);msg.classList.remove('try-again');msg.textContent=`Получилось! «${target}» готово. Повтори следующий образец.`;$('#typing-input').value='';updateWord();save();if(!$('#typing-input').disabled)$('#typing-input').focus();}
+  else{msg.classList.add('try-again');msg.textContent=value?'Пока не совпало. Проверь большие и маленькие буквы, пробелы и знак в конце. Можно попробовать ещё раз.':'Сначала напечатай образец.';}
 });
 $('#activity').addEventListener('input',e=>{if(e.target.id==='paste-input')$('#paste-feedback').textContent=e.target.value.trim().toLocaleLowerCase('ru')==='вершина'?'Слово на месте! Ты потренировался переносить текст.':'';});
 window.addEventListener('hashchange',()=>{const i=STAGE_IDS.indexOf(location.hash.slice(1));if(i>=0&&i!==state.stage)goTo(i);});
@@ -173,7 +198,8 @@ $('#restart').addEventListener('click',()=>$('#restart-dialog').showModal());
 document.querySelectorAll('dialog').forEach(dialog=>{dialog.querySelectorAll('.dialog-close,.dialog-done').forEach(b=>b.addEventListener('click',()=>dialog.close()));dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});});
 $('#confirm-restart').addEventListener('click',()=>{state=newState();save();$('#restart-dialog').close();render();$('#lesson').scrollIntoView({behavior:'smooth'});});
 function downloadBadge(){
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720"><defs><pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse"><path d="M30 0H0V30" fill="none" stroke="#d6e2ea" stroke-width="1"/></pattern></defs><rect width="1000" height="720" rx="18" fill="#fcfbf4"/><rect width="1000" height="720" fill="url(#grid)"/><path d="M70 0V720" stroke="#c4867c"/><g transform="translate(185 75) scale(1)">${drawing('mountains').replace('<svg ','<svg width="640" height="245" ')}</g><g font-family="Arial,sans-serif" text-anchor="middle" fill="#315988"><text x="500" y="390" font-size="42" font-weight="bold">Маршрут IT-Эверест пройден!</text><text x="500" y="450" font-size="23">За любопытство, внимательность и старание.</text><text x="500" y="500" font-size="23">Моя экспедиция с Екатериной</text><text x="500" y="575" font-size="18" fill="#547c66">Большая вершина покоряется маленькими шагами.</text></g><style>.pen-blue{stroke:#3f6196}.pen-red{stroke:#ba6456}.pen-green{stroke:#5e8065}.pen-gold{stroke:#b5893f}</style></svg>`;
-  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='МояПобеда-IT-Эверест.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000);$('#announcer').textContent='Карточка экспедиции сохранена в загрузки браузера.';
+  const url=URL.createObjectURL(new Blob([certificateSVG()],{type:'image/svg+xml;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='Грамота-Юный-исследователь.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000);$('#announcer').textContent='Грамота сохранена в загрузки браузера.';
 }
+
 render();
