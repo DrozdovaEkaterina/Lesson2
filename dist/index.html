@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#faf8ef">
+  <meta name="description" content="Отправляйся на IT-Эверест вместе с Екатериной! Интерактивный урок о компьютере для детей 6–11 лет: задания, подсказки и открытия в школьной тетради.">
+  <title>IT-Эверест · Тетрадь экспедиции с Екатериной</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#lesson">Перейти к уроку</a>
+  <div class="notebook">
+    <header class="book-header">
+      <a class="brand" href="#welcome" aria-label="Начало экспедиции"><span class="brand-icon" id="brand-drawing" aria-hidden="true"></span><span>Тетрадь <em>экспедиции</em></span></a>
+      <div class="header-meta"><span class="course-label">ВВОДНЫЙ КУРС</span><span class="lesson-pill">Урок 02</span></div>
+      <button class="quiet-button how-button" id="open-guide" type="button">Как проходить <span aria-hidden="true">?</span></button>
+    </header>
+    <div class="book-layout">
+      <aside class="route-panel">
+        <div class="route-heading"><span class="handwritten">Наш маршрут</span><span class="route-arrow" aria-hidden="true">↗</span></div>
+        <nav aria-label="Остановки экспедиции"><ol id="route-list" class="route-list"></ol></nav>
+        <div class="route-progress"><div class="progress-copy"><span>Твой путь</span><span id="progress-caption">0 из 8</span></div><div class="progress-track" role="progressbar" aria-label="Пройденные остановки" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"><div id="progress-fill"></div></div></div>
+        <div class="route-footnote"><span id="small-compass" aria-hidden="true"></span><p>Большая вершина.<br><span class="handwritten">Маленькие шаги.</span></p></div>
+        <button class="reset-button" id="restart" type="button">Начать заново</button>
+      </aside>
+      <main class="lesson-sheet" id="lesson" tabindex="-1">
+        <div class="page-meta"><span id="stage-meta">ОСТАНОВКА 01 / 08</span><span class="margin-note" id="margin-note">начало большого пути</span></div>
+        <section id="stage-heading" class="stage-heading" aria-labelledby="stage-title"><p class="eyebrow" id="stage-eyebrow"></p><h1 id="stage-title"></h1><p class="stage-subtitle" id="stage-subtitle"></p></section>
+        <div id="cover-art" class="cover-art" hidden></div>
+        <section class="teacher-row" aria-label="Подсказки Екатерины">
+          <figure class="teacher-photo"><div class="photo-window"><img src="assets/ekaterina.jpg" alt="Екатерина, твой преподаватель" width="900" height="1200"></div><figcaption>Екатерина</figcaption></figure>
+          <div class="speech"><div class="speech-label">ТВОЙ ПРЕПОДАВАТЕЛЬ</div><p id="replica" aria-live="polite"></p><div class="speech-controls"><div class="replica-dots" id="replica-dots" aria-label="Реплики Екатерины"></div><button id="next-replica" class="replica-next" type="button">Дальше <span aria-hidden="true">→</span></button></div></div>
+        </section>
+        <div id="activity" class="activity"></div>
+        <div id="hint" class="hint-box" hidden role="status"></div>
+        <div class="lesson-actions"><button type="button" id="previous-stage" class="previous-button"><span aria-hidden="true">←</span> Назад</button><button type="button" id="toggle-hint" class="hint-button">Нужна подсказка?</button><button type="button" id="next-stage" class="primary-button">Начать экспедицию <span aria-hidden="true">→</span></button></div>
+        <p id="storage-note" class="storage-note" hidden></p>
+        <footer class="sheet-footer"><span>Открывай. Пробуй. Удивляйся.</span><span class="page-number" id="page-number">— 01 —</span><span id="save-note">Твой прогресс сохраняется</span></footer>
+      </main>
+    </div>
+  </div>
+  <footer class="outside-footer"><span>С Екатериной · для юных исследователей 6–11 лет</span><button type="button" id="open-notes">Об уроке</button></footer>
+  <dialog id="guide-dialog" aria-labelledby="guide-title"><button type="button" class="dialog-close" aria-label="Закрыть">×</button><p class="eyebrow">ПЕРЕД СТАРТОМ</p><h2 id="guide-title" class="handwritten">Как устроена экспедиция</h2><ol class="guide-list"><li>Читай мои реплики. Кнопка «Дальше» покажет следующую.</li><li>Нажимай кнопку задания. Игра откроется в отдельной вкладке.</li><li>После игры вернись сюда и нажми «Я справился».</li><li>Если что-то трудно — открой подсказку. Можно отдохнуть и продолжить позже.</li></ol><p class="small-note">Для практики удобнее компьютер с клавиатурой. На телефоне можно читать урок. Прогресс хранится только в этом браузере.</p><button type="button" class="primary-button dialog-done">Всё понятно →</button></dialog>
+  <dialog id="notes-dialog" aria-labelledby="notes-title"><button type="button" class="dialog-close" aria-label="Закрыть">×</button><p class="eyebrow">ДЛЯ ВЗРОСЛЫХ</p><h2 id="notes-title" class="handwritten">Об этом уроке</h2><p>«Восхождение на Эверест технологий» — второй урок вводного курса. Здесь дети знакомятся с устройствами компьютера, клавиатурой, правилами безопасной работы, скриншотами и горячими клавишами.</p><p>Ориентир — 45 минут с перерывом. Можно проходить в своём темпе или разделить урок на две части. Сам сайт не запрашивает регистрацию и не отправляет ответы на сервер.</p><p>Задания LearningApps и Набираем.ру открываются на сторонних сайтах. Их прохождение ребёнок отмечает самостоятельно. Короткая проверка в финале помогает повторить основные темы.</p><p>В методичке предлагается Lightshot. Здесь также есть способ сделать скриншот без установки расширений. Инструкции: <a href="https://support.microsoft.com/en-us/windows/apps/use-snipping-tool-to-capture-screenshots" target="_blank" rel="noopener noreferrer">Microsoft</a> и <a href="https://support.apple.com/ru-ru/102646" target="_blank" rel="noopener noreferrer">Apple</a>.</p><a id="source-link" class="source-link" href="https://github.com/DrozdovaEkaterina/Lesson2" target="_blank" rel="noopener noreferrer">Исходники на GitHub ↗</a></dialog>
+  <dialog id="restart-dialog" aria-labelledby="restart-title"><h2 id="restart-title" class="handwritten">Начнём новую экспедицию?</h2><p>Отметки и ответы этой экспедиции очистятся в этом браузере.</p><div class="dialog-actions"><button type="button" class="secondary-button dialog-done">Продолжить текущую</button><button type="button" class="primary-button" id="confirm-restart">Начать заново</button></div></dialog>
+  <div class="sr-only" role="status" id="announcer"></div>
+  <noscript><div class="noscript">Для заданий и переходов включите JavaScript в браузере.</div></noscript>
+</body>
+</html>

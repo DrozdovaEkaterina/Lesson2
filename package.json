@@ -1,0 +1,11 @@
+{
+  "name": "it-everest-notebook",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Интерактивная тетрадь Екатерины: урок 2, IT-Эверест",
+  "scripts": {
+    "start": "python3 -m http.server 4173 --directory dist --bind 127.0.0.1",
+    "check": "node --check dist/app.js && node --check dist/lesson.js && node --check dist/drawings.js && node --test tests/state.test.mjs"
+  }
+}
