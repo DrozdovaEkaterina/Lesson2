@@ -1,8 +1,8 @@
-import { LESSON, QUIZ } from './lesson.js?v=4';
-import { drawing } from './drawings.js?v=4';
-import { STAGE_IDS, STORAGE_KEY, TYPING_TASKS, matchesTyping, newState, normalizeState, completeStage, canFinish } from './state.js?v=4';
-import { guideHTML, inlineTeacher, BREAKS } from './guidance.js?v=4';
-import { CERTIFICATE_TEXT, ACHIEVEMENT_TEXT, certificateSVG } from './certificate.js?v=4';
+import { LESSON, QUIZ } from './lesson.js?v=5';
+import { drawing } from './drawings.js?v=5';
+import { STAGE_IDS, STORAGE_KEY, TYPING_TASKS, matchesTyping, newState, normalizeState, completeStage, canFinish } from './state.js?v=5';
+import { inlineTeacher, BREAKS } from './guidance.js?v=5';
+import { CERTIFICATE_TEXT, ACHIEVEMENT_TEXT, certificateSVG } from './certificate.js?v=5';
 
 const $=selector=>document.querySelector(selector);
 let state=newState();
@@ -141,7 +141,6 @@ function render(){
   history.replaceState(null,'',`#${stage.id}`);
   $('#stage-meta').textContent=`ОСТАНОВКА ${String(state.stage+1).padStart(2,'0')} / 08`;
   $('#margin-note').textContent=stage.note;$('#stage-eyebrow').textContent=stage.eyebrow;$('#stage-title').textContent=stage.title;$('#stage-subtitle').textContent=stage.subtitle;
-  $('#action-guide').innerHTML=state.stage===7&&state.finished?'':guideHTML(stage.id);
   $('#cover-art').hidden=state.stage!==0;
   $('#cover-art').innerHTML=state.stage===0?drawing('mountains')+'<span class="art-caption">Вперёд, к открытиям!</span>':'';
   $('.lesson-sheet > .teacher-row').hidden=state.stage===7&&state.finished;
@@ -153,7 +152,6 @@ function render(){
   $('#toggle-hint').hidden=state.stage===7&&state.finished;
   updateProgress();renderReplica();renderActivity();save();
 }
-$('#action-guide').addEventListener('click',e=>{const b=e.target.closest('[data-guide-target]');if(!b)return;$('#action-guide').querySelectorAll('button').forEach(x=>x.classList.toggle('is-current',x===b));document.querySelector(b.dataset.guideTarget)?.scrollIntoView({behavior:'smooth',block:'center'});});
 $('#next-replica').addEventListener('click',()=>{state.replica=(state.replica+1)%LESSON[state.stage].lines.length;renderReplica();save();});
 route.addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(b)goTo(Number(b.dataset.stage));});
 $('#previous-stage').addEventListener('click',()=>goTo(state.stage-1));
